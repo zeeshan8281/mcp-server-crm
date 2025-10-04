@@ -1,15 +1,12 @@
-// 🚀 NEXT-LEVEL CRM ASSISTANT - AI-Powered Contact Intelligence 🚀
-const express = require('express');
-const bodyParser = require('body-parser');
-const cors = require('cors');
+// 🚀 REAL MCP SERVER - CRM Assistant with AI Intelligence 🚀
+const { Server } = require('@modelcontextprotocol/sdk/server/index.js');
+const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio.js');
+const { CallToolRequestSchema, ListToolsRequestSchema } = require('@modelcontextprotocol/sdk/types.js');
 const { createClient } = require('@supabase/supabase-js');
-const WebSocket = require('ws');
-const http = require('http');
 const { v4: uuidv4 } = require('uuid');
 
 require('dotenv').config();
 
-const PORT = process.env.PORT || 3000;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
@@ -19,14 +16,6 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const app = express();
-const server = http.createServer(app);
-
-// WebSocket server for real-time updates
-const wss = new WebSocket.Server({ server });
-
-// Store active connections
-const activeConnections = new Set();
 
 // AI Analytics Engine
 const AI_INSIGHTS = {
@@ -150,277 +139,6 @@ const AI_INSIGHTS = {
     return connections;
   }
 };
-
-// Real-time notification system
-const notifyClients = (type, data) => {
-  const message = JSON.stringify({ type, data, timestamp: new Date().toISOString() });
-  activeConnections.forEach(ws => {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(message);
-    }
-  });
-};
-
-// WebSocket connection handling
-wss.on('connection', (ws) => {
-  console.log('🔌 New client connected');
-  activeConnections.add(ws);
-  
-  ws.on('close', () => {
-    console.log('🔌 Client disconnected');
-    activeConnections.delete(ws);
-  });
-  
-  ws.on('error', (error) => {
-    console.error('WebSocket error:', error);
-    activeConnections.delete(ws);
-  });
-});
-
-app.use(cors());
-app.use(bodyParser.json());
-
-// 🚀 INSANE AI-POWERED ENDPOINTS 🚀
-
-// Basic health
-app.get('/health', (req, res) => res.json({ 
-  ok: true, 
-  features: ['AI Analytics', 'Real-time Updates', 'Relationship Mapping', 'Revenue Prediction'],
-  connections: activeConnections.size 
-}));
-
-// 🧠 AI CONTACT INSIGHTS - Get AI-powered analytics for all contacts
-app.get('/ai-insights', async (req, res) => {
-  try {
-    const { data: contacts, error } = await supabase
-      .from('contacts')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-
-    const insights = {
-      totalContacts: contacts.length,
-      totalRevenue: contacts.reduce((sum, c) => sum + (c.revenue || 0), 0),
-      averageRevenue: contacts.length > 0 ? Math.round(contacts.reduce((sum, c) => sum + (c.revenue || 0), 0) / contacts.length) : 0,
-      topPerformingCompanies: {},
-      revenuePredictions: [],
-      contactScores: [],
-      relationshipMap: AI_INSIGHTS.findConnections(contacts),
-      trends: {
-        highValueContacts: contacts.filter(c => (c.revenue || 0) > 10000).length,
-        techCompanies: contacts.filter(c => c.company?.toLowerCase().includes('tech')).length,
-        enterpriseDomains: contacts.filter(c => !c.email?.includes('@gmail.com')).length
-      }
-    };
-
-    // Calculate company performance
-    contacts.forEach(contact => {
-      if (contact.company) {
-        if (!insights.topPerformingCompanies[contact.company]) {
-          insights.topPerformingCompanies[contact.company] = { revenue: 0, count: 0 };
-        }
-        insights.topPerformingCompanies[contact.company].revenue += contact.revenue || 0;
-        insights.topPerformingCompanies[contact.company].count += 1;
-      }
-    });
-
-    // Generate AI predictions and scores
-    contacts.forEach(contact => {
-      insights.revenuePredictions.push({
-        contactId: contact.id,
-        name: contact.name,
-        currentRevenue: contact.revenue || 0,
-        predictedRevenue: AI_INSIGHTS.predictRevenue(contact),
-        confidence: Math.random() * 0.3 + 0.7 // 70-100% confidence
-      });
-
-      insights.contactScores.push({
-        contactId: contact.id,
-        name: contact.name,
-        score: AI_INSIGHTS.calculateScore(contact),
-        factors: {
-          revenue: Math.min((contact.revenue || 0) / 1000, 40),
-          company: contact.company ? (contact.company.toLowerCase().includes('tech') ? 30 : 15) : 0,
-          domain: contact.email?.includes('@gmail.com') ? 10 : 20,
-          nameLength: contact.name?.length > 10 ? 10 : 5
-        }
-      });
-    });
-
-    // Sort by score
-    insights.contactScores.sort((a, b) => b.score - a.score);
-    insights.revenuePredictions.sort((a, b) => b.predictedRevenue - a.predictedRevenue);
-
-    res.json({ insights });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message || 'unknown' });
-  }
-});
-
-// 🔮 REVENUE PREDICTION - AI-powered revenue forecasting
-app.get('/predict-revenue/:contactId', async (req, res) => {
-  try {
-    const { contactId } = req.params;
-    const { data: contact, error } = await supabase
-      .from('contacts')
-      .select('*')
-      .eq('id', contactId)
-      .single();
-
-    if (error) throw error;
-
-    const prediction = {
-      contactId: contact.id,
-      name: contact.name,
-      currentRevenue: contact.revenue || 0,
-      predictedRevenue: AI_INSIGHTS.predictRevenue(contact),
-      confidence: Math.random() * 0.3 + 0.7,
-      factors: {
-        companySize: contact.company?.length > 10 ? 'Large' : 'Small',
-        emailDomain: contact.email?.includes('@gmail.com') ? 'Personal' : 'Business',
-        nameLength: contact.name?.length > 15 ? 'Long' : 'Short',
-        currentValue: contact.revenue || 0
-      },
-      recommendations: [
-        contact.revenue < 5000 ? 'Focus on upselling opportunities' : 'Maintain relationship',
-        contact.company?.toLowerCase().includes('tech') ? 'Tech industry - high potential' : 'Consider industry-specific approach',
-        'Schedule regular check-ins'
-      ]
-    };
-
-    res.json({ prediction });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message || 'unknown' });
-  }
-});
-
-// 🕸️ RELATIONSHIP MAP - Visualize contact connections
-app.get('/relationship-map', async (req, res) => {
-  try {
-    const { data: contacts, error } = await supabase
-      .from('contacts')
-      .select('*');
-
-    if (error) throw error;
-
-    const connections = AI_INSIGHTS.findConnections(contacts);
-    const nodes = contacts.map(contact => ({
-      id: contact.id,
-      name: contact.name,
-      company: contact.company,
-      revenue: contact.revenue || 0,
-      score: AI_INSIGHTS.calculateScore(contact),
-      group: contact.company || 'Individual'
-    }));
-
-    res.json({ 
-      nodes, 
-      connections,
-      stats: {
-        totalNodes: nodes.length,
-        totalConnections: connections.length,
-        companies: [...new Set(contacts.map(c => c.company).filter(Boolean))].length
-      }
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message || 'unknown' });
-  }
-});
-
-// 📊 ADVANCED ANALYTICS - Deep dive into contact data
-app.get('/analytics', async (req, res) => {
-  try {
-    const { data: contacts, error } = await supabase
-      .from('contacts')
-      .select('*');
-
-    if (error) throw error;
-
-    const analytics = {
-      overview: {
-        totalContacts: contacts.length,
-        totalRevenue: contacts.reduce((sum, c) => sum + (c.revenue || 0), 0),
-        averageRevenue: contacts.length > 0 ? Math.round(contacts.reduce((sum, c) => sum + (c.revenue || 0), 0) / contacts.length) : 0,
-        medianRevenue: contacts.length > 0 ? contacts.map(c => c.revenue || 0).sort((a, b) => a - b)[Math.floor(contacts.length / 2)] : 0
-      },
-      distribution: {
-        revenueRanges: {
-          '0-1K': contacts.filter(c => (c.revenue || 0) < 1000).length,
-          '1K-5K': contacts.filter(c => (c.revenue || 0) >= 1000 && (c.revenue || 0) < 5000).length,
-          '5K-10K': contacts.filter(c => (c.revenue || 0) >= 5000 && (c.revenue || 0) < 10000).length,
-          '10K+': contacts.filter(c => (c.revenue || 0) >= 10000).length
-        },
-        companyTypes: {
-          tech: contacts.filter(c => c.company?.toLowerCase().includes('tech')).length,
-          ai: contacts.filter(c => c.company?.toLowerCase().includes('ai')).length,
-          software: contacts.filter(c => c.company?.toLowerCase().includes('software')).length,
-          other: contacts.filter(c => !c.company?.toLowerCase().includes('tech') && !c.company?.toLowerCase().includes('ai') && !c.company?.toLowerCase().includes('software')).length
-        }
-      },
-      topPerformers: {
-        byRevenue: contacts.sort((a, b) => (b.revenue || 0) - (a.revenue || 0)).slice(0, 5),
-        byScore: contacts.map(c => ({ ...c, score: AI_INSIGHTS.calculateScore(c) })).sort((a, b) => b.score - a.score).slice(0, 5),
-        byCompany: Object.entries(
-          contacts.reduce((acc, c) => {
-            if (c.company) {
-              acc[c.company] = (acc[c.company] || 0) + (c.revenue || 0);
-            }
-            return acc;
-          }, {})
-        ).sort((a, b) => b[1] - a[1]).slice(0, 5)
-      },
-      insights: {
-        highValueContacts: contacts.filter(c => (c.revenue || 0) > 10000).length,
-        potentialUpsells: contacts.filter(c => (c.revenue || 0) > 0 && (c.revenue || 0) < 5000).length,
-        newOpportunities: contacts.filter(c => (c.revenue || 0) === 0).length,
-        enterpriseClients: contacts.filter(c => !c.email?.includes('@gmail.com')).length
-      }
-    };
-
-    res.json({ analytics });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message || 'unknown' });
-  }
-});
-
-// 🤖 AI CHAT ENDPOINT 🚀
-app.post('/ai-chat', async (req, res) => {
-  try {
-    const { message } = req.body;
-    
-    if (!message) {
-      return res.status(400).json({ error: 'Message is required' });
-    }
-
-    // Get current data for AI analysis
-    const { data: contacts } = await supabase
-      .from('contacts')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    const { data: topClients } = await supabase
-      .from('contacts')
-      .select('*')
-      .order('revenue', { ascending: false })
-      .limit(10);
-
-    // AI Response Generation
-    const aiResponse = generateAIResponse(message, contacts, topClients);
-    
-    res.json({ 
-      response: aiResponse,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Error processing AI chat:', error);
-    res.status(500).json({ error: 'Failed to process AI chat' });
-  }
-});
 
 // AI Response Generator Function
 function generateAIResponse(userInput, contacts, topClients) {
@@ -566,219 +284,654 @@ Try asking: "How many contacts do I have?" or "Who is my top client?"`;
   return responses[Math.floor(Math.random() * responses.length)];
 }
 
-// 🎯 SMART RECOMMENDATIONS - AI-powered action suggestions
-app.get('/recommendations', async (req, res) => {
-  try {
-    const { data: contacts, error } = await supabase
-      .from('contacts')
-      .select('*');
+// Create MCP Server
+const server = new Server(
+  {
+    name: 'crm-assistant-mcp',
+    version: '1.0.0',
+  },
+  {
+    capabilities: {
+      tools: {},
+    },
+  }
+);
 
-    if (error) throw error;
-
-    const recommendations = {
-      immediate: [],
-      weekly: [],
-      monthly: [],
-      insights: []
-    };
-
-    contacts.forEach(contact => {
-      const score = AI_INSIGHTS.calculateScore(contact);
-      const revenue = contact.revenue || 0;
-
-      // Immediate actions
-      if (revenue === 0) {
-        recommendations.immediate.push({
-          type: 'outreach',
-          priority: 'high',
-          contact: contact.name,
-          action: 'Initial contact and qualification',
-          reason: 'New contact with no revenue'
-        });
+// Define MCP Tools
+const tools = [
+  {
+    name: 'get_contacts',
+    description: 'Get all contacts from the CRM with AI scoring and insights',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        limit: {
+          type: 'number',
+          description: 'Maximum number of contacts to return (default: 50)',
+          default: 50
+        }
       }
-
-      if (revenue > 0 && revenue < 2000) {
-        recommendations.immediate.push({
-          type: 'upsell',
-          priority: 'medium',
-          contact: contact.name,
-          action: 'Upsell opportunity identified',
-          reason: 'Low revenue but engaged customer'
-        });
-      }
-
-      // Weekly actions
-      if (score > 70) {
-        recommendations.weekly.push({
-          type: 'relationship',
-          priority: 'high',
-          contact: contact.name,
-          action: 'Schedule check-in call',
-          reason: 'High-value contact needs attention'
-        });
-      }
-
-      // Monthly actions
-      if (contact.company?.toLowerCase().includes('tech')) {
-        recommendations.monthly.push({
-          type: 'industry',
-          priority: 'medium',
-          contact: contact.name,
-          action: 'Tech industry newsletter',
-          reason: 'Tech company - industry-specific content'
-        });
-      }
-    });
-
-    // Generate insights
-    recommendations.insights = [
-      {
-        type: 'revenue',
-        message: `Total pipeline value: $${contacts.reduce((sum, c) => sum + (c.revenue || 0), 0).toLocaleString()}`,
-        impact: 'high'
+    }
+  },
+  {
+    name: 'add_contact',
+    description: 'Add a new contact to the CRM with AI-enhanced insights',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: {
+          type: 'string',
+          description: 'Contact name'
+        },
+        email: {
+          type: 'string',
+          description: 'Contact email address'
+        },
+        company: {
+          type: 'string',
+          description: 'Company name (optional)'
+        },
+        revenue: {
+          type: 'number',
+          description: 'Revenue amount (optional, default: 0)'
+        }
       },
-      {
-        type: 'growth',
-        message: `${contacts.filter(c => (c.revenue || 0) > 0).length} active customers out of ${contacts.length} total contacts`,
-        impact: 'medium'
+      required: ['name', 'email']
+    }
+  },
+  {
+    name: 'get_top_clients',
+    description: 'Get top clients sorted by revenue with AI insights',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        limit: {
+          type: 'number',
+          description: 'Number of top clients to return (default: 5)',
+          default: 5
+        }
+      }
+    }
+  },
+  {
+    name: 'search_contacts',
+    description: 'Search contacts by name or email',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Search query for name or email'
+        }
       },
-      {
-        type: 'opportunity',
-        message: `${contacts.filter(c => (c.revenue || 0) === 0).length} contacts with no revenue - potential growth area`,
-        impact: 'high'
-      }
-    ];
-
-    res.json({ recommendations });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message || 'unknown' });
+      required: ['query']
+    }
+  },
+  {
+    name: 'get_ai_insights',
+    description: 'Get comprehensive AI-powered analytics and insights',
+    inputSchema: {
+      type: 'object',
+      properties: {}
+    }
+  },
+  {
+    name: 'predict_revenue',
+    description: 'Get AI-powered revenue prediction for a specific contact',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        contact_id: {
+          type: 'string',
+          description: 'Contact ID to predict revenue for'
+        }
+      },
+      required: ['contact_id']
+    }
+  },
+  {
+    name: 'get_relationship_map',
+    description: 'Get relationship network map with connections between contacts',
+    inputSchema: {
+      type: 'object',
+      properties: {}
+    }
+  },
+  {
+    name: 'get_analytics',
+    description: 'Get detailed analytics and performance metrics',
+    inputSchema: {
+      type: 'object',
+      properties: {}
+    }
+  },
+  {
+    name: 'get_recommendations',
+    description: 'Get AI-powered action recommendations',
+    inputSchema: {
+      type: 'object',
+      properties: {}
+    }
+  },
+  {
+    name: 'ai_chat',
+    description: 'Chat with AI assistant for natural language CRM queries',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          description: 'Natural language message to the AI assistant'
+        }
+      },
+      required: ['message']
+    }
   }
+];
+
+// List Tools Handler
+server.setRequestHandler(ListToolsRequestSchema, async () => {
+  return {
+    tools: tools
+  };
 });
 
-// 📋 ENHANCED CONTACTS - Now with AI scoring and real-time updates
-app.get('/contacts', async (req, res) => {
+// Call Tool Handler
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  const { name, arguments: args } = request.params;
+
   try {
-    const limit = parseInt(req.query.limit || '50');
-    const { data, error } = await supabase
-      .from('contacts')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(limit);
+    switch (name) {
+      case 'get_contacts': {
+        const limit = args?.limit || 50;
+        const { data, error } = await supabase
+          .from('contacts')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(limit);
 
-    if (error) throw error;
-    
-    // Enhance contacts with AI data
-    const enhancedContacts = data.map(contact => ({
-      ...contact,
-      aiScore: AI_INSIGHTS.calculateScore(contact),
-      predictedRevenue: AI_INSIGHTS.predictRevenue(contact),
-      lastUpdated: new Date().toISOString()
-    }));
+        if (error) throw error;
+        
+        // Enhance contacts with AI data
+        const enhancedContacts = data.map(contact => ({
+          ...contact,
+          aiScore: AI_INSIGHTS.calculateScore(contact),
+          predictedRevenue: AI_INSIGHTS.predictRevenue(contact),
+          lastUpdated: new Date().toISOString()
+        }));
 
-    res.json({ 
-      contacts: enhancedContacts,
-      meta: {
-        total: enhancedContacts.length,
-        averageScore: Math.round(enhancedContacts.reduce((sum, c) => sum + c.aiScore, 0) / enhancedContacts.length),
-        highValueContacts: enhancedContacts.filter(c => c.aiScore > 70).length
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                contacts: enhancedContacts,
+                meta: {
+                  total: enhancedContacts.length,
+                  averageScore: Math.round(enhancedContacts.reduce((sum, c) => sum + c.aiScore, 0) / enhancedContacts.length),
+                  highValueContacts: enhancedContacts.filter(c => c.aiScore > 70).length
+                }
+              }, null, 2)
+            }
+          ]
+        };
       }
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message || 'unknown' });
-  }
-});
 
-// 🚀 SMART CONTACT CREATION - AI-enhanced contact addition with real-time notifications
-app.post('/contacts', async (req, res) => {
-  try {
-    const { name, email, company, revenue } = req.body;
-    if (!name || !email) return res.status(400).json({ error: 'name and email required' });
+      case 'add_contact': {
+        const { name: contactName, email, company, revenue } = args;
+        if (!contactName || !email) {
+          throw new Error('name and email are required');
+        }
 
-    const payload = { name, email, company: company || null, revenue: revenue || 0 };
-    const { data, error } = await supabase.from('contacts').insert(payload).select().single();
-    if (error) throw error;
-    
-    // Enhance with AI data
-    const enhancedContact = {
-      ...data,
-      aiScore: AI_INSIGHTS.calculateScore(data),
-      predictedRevenue: AI_INSIGHTS.predictRevenue(data),
-      insights: {
-        priority: data.revenue > 5000 ? 'high' : 'medium',
-        category: company?.toLowerCase().includes('tech') ? 'tech' : 'general',
-        potential: AI_INSIGHTS.predictRevenue(data) > data.revenue ? 'upsell' : 'maintain'
+        const payload = { 
+          name: contactName, 
+          email, 
+          company: company || null, 
+          revenue: revenue || 0 
+        };
+        
+        const { data, error } = await supabase
+          .from('contacts')
+          .insert(payload)
+          .select()
+          .single();
+          
+        if (error) throw error;
+        
+        // Enhance with AI data
+        const enhancedContact = {
+          ...data,
+          aiScore: AI_INSIGHTS.calculateScore(data),
+          predictedRevenue: AI_INSIGHTS.predictRevenue(data),
+          insights: {
+            priority: data.revenue > 5000 ? 'high' : 'medium',
+            category: company?.toLowerCase().includes('tech') ? 'tech' : 'general',
+            potential: AI_INSIGHTS.predictRevenue(data) > data.revenue ? 'upsell' : 'maintain'
+          }
+        };
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                contact: enhancedContact,
+                message: 'Contact added successfully with AI insights!',
+                recommendations: [
+                  enhancedContact.aiScore > 70 ? 'High-value contact - prioritize follow-up' : 'Standard contact',
+                  company?.toLowerCase().includes('tech') ? 'Tech industry - consider technical demos' : 'General approach',
+                  revenue > 0 ? 'Existing customer - focus on retention' : 'New prospect - qualification needed'
+                ]
+              }, null, 2)
+            }
+          ]
+        };
       }
+
+      case 'get_top_clients': {
+        const limit = args?.limit || 5;
+        const { data, error } = await supabase
+          .from('contacts')
+          .select('id, name, email, company, revenue')
+          .order('revenue', { ascending: false })
+          .limit(limit);
+
+        if (error) throw error;
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ top: data }, null, 2)
+            }
+          ]
+        };
+      }
+
+      case 'search_contacts': {
+        const query = args?.query?.trim();
+        if (!query) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({ results: [] }, null, 2)
+              }
+            ]
+          };
+        }
+
+        const { data, error } = await supabase
+          .from('contacts')
+          .select('*')
+          .or(`name.ilike.%${query}%,email.ilike.%${query}%`)
+          .limit(50);
+
+        if (error) throw error;
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ results: data }, null, 2)
+            }
+          ]
+        };
+      }
+
+      case 'get_ai_insights': {
+        const { data: contacts, error } = await supabase
+          .from('contacts')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const insights = {
+          totalContacts: contacts.length,
+          totalRevenue: contacts.reduce((sum, c) => sum + (c.revenue || 0), 0),
+          averageRevenue: contacts.length > 0 ? Math.round(contacts.reduce((sum, c) => sum + (c.revenue || 0), 0) / contacts.length) : 0,
+          topPerformingCompanies: {},
+          revenuePredictions: [],
+          contactScores: [],
+          relationshipMap: AI_INSIGHTS.findConnections(contacts),
+          trends: {
+            highValueContacts: contacts.filter(c => (c.revenue || 0) > 10000).length,
+            techCompanies: contacts.filter(c => c.company?.toLowerCase().includes('tech')).length,
+            enterpriseDomains: contacts.filter(c => !c.email?.includes('@gmail.com')).length
+          }
+        };
+
+        // Calculate company performance
+        contacts.forEach(contact => {
+          if (contact.company) {
+            if (!insights.topPerformingCompanies[contact.company]) {
+              insights.topPerformingCompanies[contact.company] = { revenue: 0, count: 0 };
+            }
+            insights.topPerformingCompanies[contact.company].revenue += contact.revenue || 0;
+            insights.topPerformingCompanies[contact.company].count += 1;
+          }
+        });
+
+        // Generate AI predictions and scores
+        contacts.forEach(contact => {
+          insights.revenuePredictions.push({
+            contactId: contact.id,
+            name: contact.name,
+            currentRevenue: contact.revenue || 0,
+            predictedRevenue: AI_INSIGHTS.predictRevenue(contact),
+            confidence: Math.random() * 0.3 + 0.7 // 70-100% confidence
+          });
+
+          insights.contactScores.push({
+            contactId: contact.id,
+            name: contact.name,
+            score: AI_INSIGHTS.calculateScore(contact),
+            factors: {
+              revenue: Math.min((contact.revenue || 0) / 1000, 40),
+              company: contact.company ? (contact.company.toLowerCase().includes('tech') ? 30 : 15) : 0,
+              domain: contact.email?.includes('@gmail.com') ? 10 : 20,
+              nameLength: contact.name?.length > 10 ? 10 : 5
+            }
+          });
+        });
+
+        // Sort by score
+        insights.contactScores.sort((a, b) => b.score - a.score);
+        insights.revenuePredictions.sort((a, b) => b.predictedRevenue - a.predictedRevenue);
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ insights }, null, 2)
+            }
+          ]
+        };
+      }
+
+      case 'predict_revenue': {
+        const { contact_id } = args;
+        const { data: contact, error } = await supabase
+          .from('contacts')
+          .select('*')
+          .eq('id', contact_id)
+          .single();
+
+        if (error) throw error;
+
+        const prediction = {
+          contactId: contact.id,
+          name: contact.name,
+          currentRevenue: contact.revenue || 0,
+          predictedRevenue: AI_INSIGHTS.predictRevenue(contact),
+          confidence: Math.random() * 0.3 + 0.7,
+          factors: {
+            companySize: contact.company?.length > 10 ? 'Large' : 'Small',
+            emailDomain: contact.email?.includes('@gmail.com') ? 'Personal' : 'Business',
+            nameLength: contact.name?.length > 15 ? 'Long' : 'Short',
+            currentValue: contact.revenue || 0
+          },
+          recommendations: [
+            contact.revenue < 5000 ? 'Focus on upselling opportunities' : 'Maintain relationship',
+            contact.company?.toLowerCase().includes('tech') ? 'Tech industry - high potential' : 'Consider industry-specific approach',
+            'Schedule regular check-ins'
+          ]
+        };
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ prediction }, null, 2)
+            }
+          ]
+        };
+      }
+
+      case 'get_relationship_map': {
+        const { data: contacts, error } = await supabase
+          .from('contacts')
+          .select('*');
+
+        if (error) throw error;
+
+        const connections = AI_INSIGHTS.findConnections(contacts);
+        const nodes = contacts.map(contact => ({
+          id: contact.id,
+          name: contact.name,
+          company: contact.company,
+          revenue: contact.revenue || 0,
+          score: AI_INSIGHTS.calculateScore(contact),
+          group: contact.company || 'Individual'
+        }));
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ 
+                nodes, 
+                connections,
+                stats: {
+                  totalNodes: nodes.length,
+                  totalConnections: connections.length,
+                  companies: [...new Set(contacts.map(c => c.company).filter(Boolean))].length
+                }
+              }, null, 2)
+            }
+          ]
+        };
+      }
+
+      case 'get_analytics': {
+        const { data: contacts, error } = await supabase
+          .from('contacts')
+          .select('*');
+
+        if (error) throw error;
+
+        const analytics = {
+          overview: {
+            totalContacts: contacts.length,
+            totalRevenue: contacts.reduce((sum, c) => sum + (c.revenue || 0), 0),
+            averageRevenue: contacts.length > 0 ? Math.round(contacts.reduce((sum, c) => sum + (c.revenue || 0), 0) / contacts.length) : 0,
+            medianRevenue: contacts.length > 0 ? contacts.map(c => c.revenue || 0).sort((a, b) => a - b)[Math.floor(contacts.length / 2)] : 0
+          },
+          distribution: {
+            revenueRanges: {
+              '0-1K': contacts.filter(c => (c.revenue || 0) < 1000).length,
+              '1K-5K': contacts.filter(c => (c.revenue || 0) >= 1000 && (c.revenue || 0) < 5000).length,
+              '5K-10K': contacts.filter(c => (c.revenue || 0) >= 5000 && (c.revenue || 0) < 10000).length,
+              '10K+': contacts.filter(c => (c.revenue || 0) >= 10000).length
+            },
+            companyTypes: {
+              tech: contacts.filter(c => c.company?.toLowerCase().includes('tech')).length,
+              ai: contacts.filter(c => c.company?.toLowerCase().includes('ai')).length,
+              software: contacts.filter(c => c.company?.toLowerCase().includes('software')).length,
+              other: contacts.filter(c => !c.company?.toLowerCase().includes('tech') && !c.company?.toLowerCase().includes('ai') && !c.company?.toLowerCase().includes('software')).length
+            }
+          },
+          topPerformers: {
+            byRevenue: contacts.sort((a, b) => (b.revenue || 0) - (a.revenue || 0)).slice(0, 5),
+            byScore: contacts.map(c => ({ ...c, score: AI_INSIGHTS.calculateScore(c) })).sort((a, b) => b.score - a.score).slice(0, 5),
+            byCompany: Object.entries(
+              contacts.reduce((acc, c) => {
+                if (c.company) {
+                  acc[c.company] = (acc[c.company] || 0) + (c.revenue || 0);
+                }
+                return acc;
+              }, {})
+            ).sort((a, b) => b[1] - a[1]).slice(0, 5)
+          },
+          insights: {
+            highValueContacts: contacts.filter(c => (c.revenue || 0) > 10000).length,
+            potentialUpsells: contacts.filter(c => (c.revenue || 0) > 0 && (c.revenue || 0) < 5000).length,
+            newOpportunities: contacts.filter(c => (c.revenue || 0) === 0).length,
+            enterpriseClients: contacts.filter(c => !c.email?.includes('@gmail.com')).length
+          }
+        };
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ analytics }, null, 2)
+            }
+          ]
+        };
+      }
+
+      case 'get_recommendations': {
+        const { data: contacts, error } = await supabase
+          .from('contacts')
+          .select('*');
+
+        if (error) throw error;
+
+        const recommendations = {
+          immediate: [],
+          weekly: [],
+          monthly: [],
+          insights: []
+        };
+
+        contacts.forEach(contact => {
+          const score = AI_INSIGHTS.calculateScore(contact);
+          const revenue = contact.revenue || 0;
+
+          // Immediate actions
+          if (revenue === 0) {
+            recommendations.immediate.push({
+              type: 'outreach',
+              priority: 'high',
+              contact: contact.name,
+              action: 'Initial contact and qualification',
+              reason: 'New contact with no revenue'
+            });
+          }
+
+          if (revenue > 0 && revenue < 2000) {
+            recommendations.immediate.push({
+              type: 'upsell',
+              priority: 'medium',
+              contact: contact.name,
+              action: 'Upsell opportunity identified',
+              reason: 'Low revenue but engaged customer'
+            });
+          }
+
+          // Weekly actions
+          if (score > 70) {
+            recommendations.weekly.push({
+              type: 'relationship',
+              priority: 'high',
+              contact: contact.name,
+              action: 'Schedule check-in call',
+              reason: 'High-value contact needs attention'
+            });
+          }
+
+          // Monthly actions
+          if (contact.company?.toLowerCase().includes('tech')) {
+            recommendations.monthly.push({
+              type: 'industry',
+              priority: 'medium',
+              contact: contact.name,
+              action: 'Tech industry newsletter',
+              reason: 'Tech company - industry-specific content'
+            });
+          }
+        });
+
+        // Generate insights
+        recommendations.insights = [
+          {
+            type: 'revenue',
+            message: `Total pipeline value: $${contacts.reduce((sum, c) => sum + (c.revenue || 0), 0).toLocaleString()}`,
+            impact: 'high'
+          },
+          {
+            type: 'growth',
+            message: `${contacts.filter(c => (c.revenue || 0) > 0).length} active customers out of ${contacts.length} total contacts`,
+            impact: 'medium'
+          },
+          {
+            type: 'opportunity',
+            message: `${contacts.filter(c => (c.revenue || 0) === 0).length} contacts with no revenue - potential growth area`,
+            impact: 'high'
+          }
+        ];
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ recommendations }, null, 2)
+            }
+          ]
+        };
+      }
+
+      case 'ai_chat': {
+        const { message } = args;
+        
+        if (!message) {
+          throw new Error('Message is required');
+        }
+
+        // Get current data for AI analysis
+        const { data: contacts } = await supabase
+          .from('contacts')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        const { data: topClients } = await supabase
+          .from('contacts')
+          .select('*')
+          .order('revenue', { ascending: false })
+          .limit(10);
+
+        // AI Response Generation
+        const aiResponse = generateAIResponse(message, contacts, topClients);
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ 
+                response: aiResponse,
+                timestamp: new Date().toISOString()
+              }, null, 2)
+            }
+          ]
+        };
+      }
+
+      default:
+        throw new Error(`Unknown tool: ${name}`);
+    }
+  } catch (error) {
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({ error: error.message }, null, 2)
+        }
+      ],
+      isError: true
     };
-
-    // Send real-time notification
-    notifyClients('contact_added', {
-      contact: enhancedContact,
-      message: `New contact added: ${name}`,
-      timestamp: new Date().toISOString()
-    });
-
-    res.json({ 
-      contact: enhancedContact,
-      message: 'Contact added successfully with AI insights!',
-      recommendations: [
-        enhancedContact.aiScore > 70 ? 'High-value contact - prioritize follow-up' : 'Standard contact',
-        company?.toLowerCase().includes('tech') ? 'Tech industry - consider technical demos' : 'General approach',
-        revenue > 0 ? 'Existing customer - focus on retention' : 'New prospect - qualification needed'
-      ]
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message || 'unknown' });
   }
 });
 
-// GET /top-clients?limit=5  -> returns contacts sorted by revenue
-app.get('/top-clients', async (req, res) => {
-  try {
-    const limit = parseInt(req.query.limit || '5');
-    const { data, error } = await supabase
-      .from('contacts')
-      .select('id, name, email, company, revenue')
-      .order('revenue', { ascending: false })
-      .limit(limit);
-
-    if (error) throw error;
-    res.json({ top: data });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message || 'unknown' });
-  }
-});
-
-// Simple search endpoint: GET /search?q=zeeshan
-app.get('/search', async (req, res) => {
-  try {
-    const q = (req.query.q || '').trim();
-    if (!q) return res.json({ results: [] });
-
-    // naive search across name and email
-    const { data, error } = await supabase
-      .from('contacts')
-      .select('*')
-      .or(`name.ilike.%${q}%,email.ilike.%${q}%`)
-      .limit(50);
-
-    if (error) throw error;
-    res.json({ results: data });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message || 'unknown' });
-  }
-});
-
-// 🚀 START THE INSANE CRM ASSISTANT SERVER 🚀
-server.listen(PORT, () => {
-  console.log('🚀 NEXT-LEVEL CRM ASSISTANT STARTED! 🚀');
-  console.log(`📡 API Server: http://localhost:${PORT}`);
-  console.log(`🔌 WebSocket: ws://localhost:${PORT}`);
+// Start MCP Server
+async function main() {
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+  console.log('🚀 MCP CRM Assistant Server Started! 🚀');
   console.log('🧠 AI Features: Analytics, Predictions, Relationship Mapping');
   console.log('⚡ Real-time: Live updates, notifications, smart insights');
-  console.log('🎯 Ready for INSANE CRM operations!');
-});
+  console.log('🎯 Ready for INSANE CRM operations via MCP!');
+}
+
+main().catch(console.error);
