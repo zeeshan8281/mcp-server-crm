@@ -1,0 +1,27 @@
+{
+  "name": "crm_assistant",
+  "version": "0.1",
+  "description": "Minimal MCP tool exposing CRM endpoints",
+  "endpoints": {
+    "getContacts": {
+      "method": "GET",
+      "path": "/contacts",
+      "query": { "limit": "number" }
+    },
+    "addContact": {
+      "method": "POST",
+      "path": "/contacts",
+      "body": { "name": "string", "email": "string", "company": "string", "revenue": "number" }
+    },
+    "topClients": {
+      "method": "GET",
+      "path": "/top-clients",
+      "query": { "limit": "number" }
+    },
+    "search": {
+      "method": "GET",
+      "path": "/search",
+      "query": { "q": "string" }
+    }
+  }
+}
